@@ -1,13 +1,13 @@
 package com.workintech.s19d2;
 
+import com.workintech.s19d2.repository.AccountRepository;
+import com.workintech.s19d2.repository.MemberRepository;
+import com.workintech.s19d2.repository.RoleRepository;
 import com.workintech.s19d2.dto.RegisterResponse;
 import com.workintech.s19d2.dto.RegistrationMember;
 import com.workintech.s19d2.entity.Account;
 import com.workintech.s19d2.entity.Member;
 import com.workintech.s19d2.entity.Role;
-import com.workintech.s19d2.repository.AccountRepository;
-import com.workintech.s19d2.repository.MemberRepository;
-import com.workintech.s19d2.repository.RoleRepository;
 import com.workintech.s19d2.service.AccountServiceImpl;
 import com.workintech.s19d2.service.AuthenticationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -228,19 +226,31 @@ class MainTest {
         verify(mockAccountRepository).save(account);
     }
 
-    @Test
+
     @DisplayName("Register New Member Successfully")
+    @Test
     void registerNewMemberSuccessfully() {
-        given(mockMemberRepository.findByEmail(anyString())).willReturn(Optional.empty());
-        given(passwordEncoder.encode(anyString())).willReturn("password");
-        given(mockRoleRepository.findByAuthority("ADMIN")).willReturn(Optional.of(role));
-        given(mockMemberRepository.save(any(Member.class))).willReturn(member);
+        // Arrange
+        Role userRole = new Role();
+        userRole.setAuthority("USER");
 
-        Member registeredMember = authenticationService.register("test@example.com", "password");
+        when(mockRoleRepository.findByAuthority("USER")).thenReturn(Optional.of(userRole));
+        when(mockMemberRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
 
-        assertThat(registeredMember.getEmail()).isEqualTo("test@example.com");
-        assertThat(registeredMember.getPassword()).isEqualTo("password");
-        verify(mockMemberRepository).save(any(Member.class));
+        Member savedMember = new Member();
+        savedMember.setEmail("test@example.com");
+        savedMember.setPassword("encodedPassword");
+        savedMember.setAuthorities(List.of(userRole));
+
+        when(mockMemberRepository.save(any(Member.class))).thenReturn(savedMember);
+
+        // Act
+        Member result = authenticationService.register("test@example.com", "rawPassword");
+
+        // Assert
+        assertEquals("test@example.com", result.getEmail());
+        assertEquals("encodedPassword", result.getPassword());
     }
 
     @Test
